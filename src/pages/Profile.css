@@ -127,8 +127,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   padding: 15px 16px;
+  border: none;
   border-bottom: 1px solid var(--color-border);
+  background: none;
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -167,4 +172,71 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.lang-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.lang-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.lang-row.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+.help-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  font-family: inherit;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.help-row svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.help-row div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.help-row strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.help-row span {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }

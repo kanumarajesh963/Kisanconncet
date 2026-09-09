@@ -1,5 +1,11 @@
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY
 const BASE_URL = 'https://api.openweathermap.org/data/2.5'
+const CACHE_KEY = 'kc_weather_cache_v1'
+const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes for a real GPS-based result
+const FALLBACK_CACHE_TTL_MS = 20 * 1000 // 20 seconds when location fell back — retry soon
+
+let memoryCache = null
+let inFlightRequest = null
 
 // Fallback location when live GPS isn't available: Hyderabad, Telangana
 const LAT = 17.385
@@ -48,7 +54,59 @@ async function reverseGeocode(lat, lon) {
   }
 }
 
+function ttlFor(data) {
+  return data.today.isLiveLocation ? CACHE_TTL_MS : FALLBACK_CACHE_TTL_MS
+}
+
+function readCache() {
+  if (memoryCache && Date.now() - memoryCache.savedAt < ttlFor(memoryCache.data)) {
+    return memoryCache.data
+  }
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (Date.now() - parsed.savedAt < ttlFor(parsed.data)) {
+      memoryCache = parsed
+      return parsed.data
+    }
+  } catch {
+    // ignore corrupt cache
+  }
+  return null
+}
+
+function writeCache(data) {
+  const entry = { data, savedAt: Date.now() }
+  memoryCache = entry
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry))
+  } catch {
+    // storage full or unavailable — memory cache still works
+  }
+}
+
 export async function fetchWeatherData() {
+  const cached = readCache()
+  if (cached) return cached
+
+  if (inFlightRequest) return inFlightRequest
+
+  inFlightRequest = fetchWeatherDataUncached()
+    .then((data) => {
+      writeCache(data)
+      inFlightRequest = null
+      return data
+    })
+    .catch((err) => {
+      inFlightRequest = null
+      throw err
+    })
+
+  return inFlightRequest
+}
+
+async function fetchWeatherDataUncached() {
   if (!API_KEY) {
     throw new Error('Weather API key not configured')
   }

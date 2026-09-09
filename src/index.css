@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --color-primary: #1F8A45;
+  --color-primary-dark: #16632F;
+  --color-primary-light: #E6F4EA;
+  --color-accent: #F5A623;
+  --color-danger: #E14B4B;
+  --color-info: #2E7CD6;
+
+  --color-bg: #F6F8F6;
+  --color-surface: #FFFFFF;
+  --color-text: #1B1F1C;
+  --color-text-muted: #6B756E;
+  --color-border: #E4E9E5;
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+
+  --shadow-sm: 0 1px 3px rgba(20, 30, 20, 0.06);
+  --shadow-md: 0 8px 24px rgba(20, 30, 20, 0.08);
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button, input {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D3DBD5;
+  border-radius: 10px;
+}

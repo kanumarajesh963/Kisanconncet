@@ -1,13 +1,68 @@
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, MapPin, Droplets, Wind, CloudRain, AlertTriangle,
-  CheckCircle2, XCircle, Sunrise, Sunset,
+  CheckCircle2, XCircle, Sunrise, Sunset, Loader2,
 } from 'lucide-react'
-import { weatherToday, weatherForecast, sprayAdvisory } from '../data/mockData.js'
+import { fetchWeatherData } from '../lib/weather.js'
 import './Weather.css'
 
 export default function Weather() {
   const navigate = useNavigate()
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await fetchWeatherData()
+      setData(result)
+    } catch (err) {
+      setError('Could not load live weather — the API key may still be activating (can take up to 2 hours after signup)')
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  if (loading) {
+    return (
+      <div className="weather-page">
+        <div className="weather-page-header">
+          <button className="cs-back" onClick={() => navigate('/home')}>
+            <ArrowLeft size={18} />
+          </button>
+          <h1>Weather &amp; Alerts</h1>
+        </div>
+        <div className="market-loading">
+          <Loader2 size={22} className="spin" /> Fetching live weather…
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <div className="weather-page">
+        <div className="weather-page-header">
+          <button className="cs-back" onClick={() => navigate('/home')}>
+            <ArrowLeft size={18} />
+          </button>
+          <h1>Weather &amp; Alerts</h1>
+        </div>
+        <div className="market-error">
+          {error}
+          <button onClick={load}>Retry</button>
+        </div>
+      </div>
+    )
+  }
+
+  const { today, forecast, sprayAdvisory } = data
   const sprayOk = sprayAdvisory.status === 'recommended'
 
   return (
@@ -20,42 +75,43 @@ export default function Weather() {
       </div>
 
       <div className="location-row">
-        <MapPin size={13} /> {weatherToday.location}
+        <MapPin size={13} /> {today.location}
+        {!today.isLiveLocation && <span className="location-fallback-note">(default village)</span>}
       </div>
 
       <div className="current-card">
         <div className="current-top">
           <div>
-            <h2>{weatherToday.temp}°C</h2>
-            <span>{weatherToday.condition}</span>
+            <h2>{today.temp}°C</h2>
+            <span>{today.condition}</span>
           </div>
-          <span className="current-icon">⛅</span>
+          <span className="current-icon">{today.icon}</span>
         </div>
         <div className="current-stats">
           <div className="current-stat">
             <Droplets size={16} />
-            <strong>{weatherToday.humidity}%</strong>
+            <strong>{today.humidity}%</strong>
             <span>Humidity</span>
           </div>
           <div className="current-stat">
             <Wind size={16} />
-            <strong>{weatherToday.wind} km/h</strong>
+            <strong>{today.wind} km/h</strong>
             <span>Wind</span>
           </div>
           <div className="current-stat">
             <CloudRain size={16} />
-            <strong>{weatherToday.rainChance}%</strong>
+            <strong>{today.rainChance}%</strong>
             <span>Rain Chance</span>
           </div>
         </div>
       </div>
 
-      {weatherToday.alert && (
+      {today.alert && (
         <div className="alert-banner-lg">
           <AlertTriangle size={20} />
           <div>
             <strong>Rain Alert</strong>
-            <p>{weatherToday.alert.message}</p>
+            <p>{today.alert.message}</p>
           </div>
         </div>
       )}
@@ -71,11 +127,11 @@ export default function Weather() {
       </div>
 
       <div className="section-heading">
-        <h2>7-Day Forecast</h2>
+        <h2>{forecast.length}-Day Forecast</h2>
       </div>
 
       <div className="forecast-scroll">
-        {weatherForecast.map((d) => (
+        {forecast.map((d) => (
           <div className={'forecast-card' + (d.day === 'Today' ? ' today' : '')} key={d.day}>
             <span className="forecast-day">{d.day}</span>
             <span className="forecast-icon">{d.icon}</span>
@@ -89,14 +145,14 @@ export default function Weather() {
         <div className="sun-card">
           <Sunrise size={18} />
           <div>
-            <strong>6:12 AM</strong>
+            <strong>{today.sunrise}</strong>
             <span>Sunrise</span>
           </div>
         </div>
         <div className="sun-card">
           <Sunset size={18} />
           <div>
-            <strong>6:48 PM</strong>
+            <strong>{today.sunset}</strong>
             <span>Sunset</span>
           </div>
         </div>

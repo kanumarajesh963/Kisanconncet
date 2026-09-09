@@ -1,24 +1,16 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Plus, MapPin, Gavel, MessageCircle, X, Truck, Send, Trash2,
   CheckCircle2, Camera, LocateFixed, Loader2, Link2, Pencil,
 } from 'lucide-react'
-import { marketplaceListings as initialListings, user } from '../data/mockData.js'
+import { supabase } from '../lib/supabaseClient.js'
+import { user } from '../data/mockData.js'
 import './Marketplace.css'
 
 const cropEmoji = {
   onion: '🧅', tomato: '🍅', soybean: '🌱', sugarcane: '🎋',
   wheat: '🌾', rice: '🌾', potato: '🥔',
-}
-
-const initialChats = {
-  1: [
-    { from: 'them', text: 'Hi, is the onion still available?' },
-    { from: 'me', text: 'Yes, 2500 kg ready for pickup.' },
-  ],
-  2: [{ from: 'them', text: 'Can you do ₹15/kg for the full lot?' }],
-  3: [],
 }
 
 const MAX_PHOTOS = 6
@@ -28,15 +20,18 @@ const emptyForm = { crop: '', quantity: '', price: '', photos: [], mapLink: '' }
 export default function Marketplace() {
   const navigate = useNavigate()
   const [tab, setTab] = useState('buy')
-  const [listings, setListings] = useState(initialListings)
-  const [myListings, setMyListings] = useState([])
+  const [listings, setListings] = useState([])
+  const [loadingListings, setLoadingListings] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [selected, setSelected] = useState(null)
   const [bid, setBid] = useState('')
+  const [placingBid, setPlacingBid] = useState(false)
   const [chatWith, setChatWith] = useState(null)
-  const [chats, setChats] = useState(initialChats)
+  const [chatMessages, setChatMessages] = useState([])
   const [chatInput, setChatInput] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [publishing, setPublishing] = useState(false)
   const [locating, setLocating] = useState(false)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [toast, setToast] = useState('')
@@ -47,35 +42,90 @@ export default function Marketplace() {
     setTimeout(() => setToast(''), 2200)
   }
 
+  const fetchListings = useCallback(async () => {
+    setLoadingListings(true)
+    const { data, error } = await supabase
+      .from('listings')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) {
+      setLoadError('Could not load listings — check your connection')
+    } else {
+      setLoadError('')
+      setListings(data)
+    }
+    setLoadingListings(false)
+  }, [])
+
+  useEffect(() => {
+    fetchListings()
+  }, [fetchListings])
+
+  const myListings = listings.filter((l) => l.seller_name === user.name)
+  const buyListings = listings.filter((l) => l.seller_name !== user.name)
+
   const openBid = (listing) => {
     setSelected(listing)
-    setBid(String(listing.highestBid + 0.5))
+    setBid(String((listing.highest_bid || listing.price_per_kg) + 0.5))
   }
 
-  const confirmBid = () => {
+  const confirmBid = async () => {
+    setPlacingBid(true)
+    const amount = parseFloat(bid)
+    const { error: bidError } = await supabase
+      .from('bids')
+      .insert({ listing_id: selected.id, bidder_name: user.name, amount })
+    const { error: updateError } = await supabase
+      .from('listings')
+      .update({ highest_bid: amount, bid_count: selected.bid_count + 1 })
+      .eq('id', selected.id)
+
+    setPlacingBid(false)
+    if (bidError || updateError) {
+      showToast('Could not place bid — try again')
+      return
+    }
     setListings((prev) =>
       prev.map((l) =>
-        l.id === selected.id
-          ? { ...l, bids: l.bids + 1, highestBid: parseFloat(bid) }
-          : l
+        l.id === selected.id ? { ...l, highest_bid: amount, bid_count: l.bid_count + 1 } : l
       )
     )
     showToast(`Bid of ₹${bid}/kg placed on ${selected.crop}`)
     setSelected(null)
   }
 
-  const openChat = (listing) => {
+  const openChat = async (listing) => {
     setChatWith(listing)
-    if (!chats[listing.id]) setChats((prev) => ({ ...prev, [listing.id]: [] }))
+    setChatMessages([])
+    const { data } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('listing_id', listing.id)
+      .order('created_at', { ascending: true })
+    setChatMessages(data || [])
   }
 
-  const sendChat = () => {
-    if (!chatInput.trim()) return
-    setChats((prev) => ({
-      ...prev,
-      [chatWith.id]: [...(prev[chatWith.id] || []), { from: 'me', text: chatInput.trim() }],
-    }))
+  useEffect(() => {
+    if (!chatWith) return
+    const channel = supabase
+      .channel(`chat-${chatWith.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `listing_id=eq.${chatWith.id}` },
+        (payload) => setChatMessages((prev) => [...prev, payload.new])
+      )
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [chatWith])
+
+  const sendChat = async () => {
+    if (!chatInput.trim() || !chatWith) return
+    const message = chatInput.trim()
     setChatInput('')
+    const { error } = await supabase
+      .from('chat_messages')
+      .insert({ listing_id: chatWith.id, sender_name: user.name, message })
+    if (error) showToast('Message failed to send')
   }
 
   const handlePhotoSelect = (e) => {
@@ -127,24 +177,38 @@ export default function Marketplace() {
     )
   }
 
-  const submitListing = (e) => {
+  const submitListing = async (e) => {
     e.preventDefault()
     if (!form.crop || !form.quantity || !form.price) return
-    const key = form.crop.trim().toLowerCase()
-    const newListing = {
-      id: Date.now(),
-      crop: form.crop.trim(),
-      quantity: `${form.quantity} kg`,
-      pricePerKg: parseFloat(form.price),
-      seller: user.name,
-      village: user.village.split(',')[0],
-      bids: 0,
-      highestBid: parseFloat(form.price),
-      image: cropEmoji[key] || '🌿',
-      photos: form.photos,
-      mapLink: form.mapLink.trim() || null,
+    if (!form.mapLink.trim()) {
+      showToast('Pickup location is required')
+      return
     }
-    setMyListings((prev) => [newListing, ...prev])
+    const key = form.crop.trim().toLowerCase()
+    const price = parseFloat(form.price)
+    setPublishing(true)
+    const { data, error } = await supabase
+      .from('listings')
+      .insert({
+        crop: form.crop.trim(),
+        quantity: `${form.quantity} kg`,
+        price_per_kg: price,
+        seller_name: user.name,
+        village: user.village.split(',')[0],
+        map_link: form.mapLink.trim() || null,
+        photos: form.photos,
+        highest_bid: price,
+        bid_count: 0,
+      })
+      .select()
+      .single()
+    setPublishing(false)
+
+    if (error) {
+      showToast('Could not publish listing — try again')
+      return
+    }
+    setListings((prev) => [data, ...prev])
     setForm(emptyForm)
     setShowLinkInput(false)
     setShowAddForm(false)
@@ -158,8 +222,13 @@ export default function Marketplace() {
     setShowLinkInput(false)
   }
 
-  const removeMyListing = (id) => {
-    setMyListings((prev) => prev.filter((l) => l.id !== id))
+  const removeMyListing = async (id) => {
+    const { error } = await supabase.from('listings').delete().eq('id', id)
+    if (error) {
+      showToast('Could not remove listing')
+      return
+    }
+    setListings((prev) => prev.filter((l) => l.id !== id))
     showToast('Listing removed')
   }
 
@@ -170,7 +239,7 @@ export default function Marketplace() {
         {l.photos.length > 1 && <span className="photo-count-badge">+{l.photos.length - 1}</span>}
       </div>
     ) : (
-      <span className="listing-emoji">{l.image}</span>
+      <span className="listing-emoji">{cropEmoji[l.crop.toLowerCase()] || '🌿'}</span>
     )
 
   return (
@@ -194,38 +263,59 @@ export default function Marketplace() {
         </button>
       </div>
 
-      {tab === 'buy' && (
-        <div className="listing-list">
-          {listings.map((l) => (
-            <div className="listing-card" key={l.id}>
-              <div className="listing-top">
-                {renderThumb(l)}
-                <div className="listing-main">
-                  <strong>{l.crop} · {l.quantity}</strong>
-                  <p><MapPin size={12} /> {l.seller}, {l.village}</p>
-                </div>
-                <div className="listing-price">
-                  <span>₹{l.pricePerKg}/kg</span>
-                </div>
-              </div>
-              <div className="listing-bottom">
-                <div className="bid-info">
-                  <Gavel size={13} />
-                  <span>{l.bids} bids · Highest ₹{l.highestBid}/kg</span>
-                </div>
-                <div className="listing-actions">
-                  <button className="icon-btn" onClick={() => openChat(l)} title="Chat with seller">
-                    <MessageCircle size={15} />
-                  </button>
-                  <button className="bid-btn" onClick={() => openBid(l)}>Place Bid</button>
-                </div>
-              </div>
-            </div>
-          ))}
+      {loadingListings && (
+        <div className="market-loading">
+          <Loader2 size={22} className="spin" /> Loading listings…
         </div>
       )}
 
-      {tab === 'sell' && (
+      {!loadingListings && loadError && (
+        <div className="market-error">
+          {loadError}
+          <button onClick={fetchListings}>Retry</button>
+        </div>
+      )}
+
+      {!loadingListings && !loadError && tab === 'buy' && (
+        buyListings.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">🌾</div>
+            <h2>No listings yet</h2>
+            <p>Be the first to list your produce, or check back soon.</p>
+          </div>
+        ) : (
+          <div className="listing-list">
+            {buyListings.map((l) => (
+              <div className="listing-card" key={l.id}>
+                <div className="listing-top">
+                  {renderThumb(l)}
+                  <div className="listing-main">
+                    <strong>{l.crop} · {l.quantity}</strong>
+                    <p><MapPin size={12} /> {l.seller_name}, {l.village}</p>
+                  </div>
+                  <div className="listing-price">
+                    <span>₹{l.price_per_kg}/kg</span>
+                  </div>
+                </div>
+                <div className="listing-bottom">
+                  <div className="bid-info">
+                    <Gavel size={13} />
+                    <span>{l.bid_count} bids · Highest ₹{l.highest_bid}/kg</span>
+                  </div>
+                  <div className="listing-actions">
+                    <button className="icon-btn" onClick={() => openChat(l)} title="Chat with seller">
+                      <MessageCircle size={15} />
+                    </button>
+                    <button className="bid-btn" onClick={() => openBid(l)}>Place Bid</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {!loadingListings && !loadError && tab === 'sell' && (
         myListings.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">🌾</div>
@@ -246,17 +336,17 @@ export default function Marketplace() {
                     <p><MapPin size={12} /> {l.village}</p>
                   </div>
                   <div className="listing-price">
-                    <span>₹{l.pricePerKg}/kg</span>
+                    <span>₹{l.price_per_kg}/kg</span>
                   </div>
                 </div>
                 <div className="listing-bottom">
                   <div className="bid-info">
                     <Gavel size={13} />
-                    <span>{l.bids} bids so far</span>
+                    <span>{l.bid_count} bids so far</span>
                   </div>
                   <div className="listing-actions">
-                    {l.mapLink && (
-                      <a className="icon-btn" href={l.mapLink} target="_blank" rel="noreferrer" title="View on map">
+                    {l.map_link && (
+                      <a className="icon-btn" href={l.map_link} target="_blank" rel="noreferrer" title="View on map">
                         <MapPin size={15} />
                       </a>
                     )}
@@ -344,7 +434,7 @@ export default function Marketplace() {
               />
             </div>
 
-            <label className="bid-label">Pickup Location</label>
+            <label className="bid-label">Pickup Location *</label>
 
             {form.mapLink ? (
               <div className="location-set-card">
@@ -394,7 +484,9 @@ export default function Marketplace() {
               </>
             )}
 
-            <button type="submit" className="confirm-bid-btn">Publish Listing</button>
+            <button type="submit" className="confirm-bid-btn" disabled={publishing}>
+              {publishing ? 'Publishing…' : 'Publish Listing'}
+            </button>
           </form>
         </div>
       )}
@@ -406,7 +498,7 @@ export default function Marketplace() {
               <h3>Place Your Bid</h3>
               <button onClick={() => setSelected(null)}><X size={18} /></button>
             </div>
-            <p className="sheet-sub">{selected.crop} · {selected.quantity} · {selected.seller}</p>
+            <p className="sheet-sub">{selected.crop} · {selected.quantity} · {selected.seller_name}</p>
 
             <label className="bid-label">Your Offer (per kg)</label>
             <div className="bid-input">
@@ -418,15 +510,15 @@ export default function Marketplace() {
                 step="0.5"
               />
             </div>
-            <p className="sheet-hint">Current highest bid: ₹{selected.highestBid}/kg</p>
+            <p className="sheet-hint">Current highest bid: ₹{selected.highest_bid}/kg</p>
 
             <div className="logistics-note">
               <Truck size={15} />
               <span>Free pickup by verified logistics partner if bid is accepted</span>
             </div>
 
-            <button className="confirm-bid-btn" onClick={confirmBid}>
-              Confirm Bid — ₹{bid}/kg
+            <button className="confirm-bid-btn" onClick={confirmBid} disabled={placingBid}>
+              {placingBid ? 'Placing Bid…' : `Confirm Bid — ₹${bid}/kg`}
             </button>
           </div>
         </div>
@@ -437,17 +529,22 @@ export default function Marketplace() {
           <div className="chat-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-header">
               <div>
-                <h3>{chatWith.seller}</h3>
+                <h3>{chatWith.seller_name}</h3>
                 <p className="sheet-sub tight">{chatWith.crop} · {chatWith.quantity}</p>
               </div>
               <button onClick={() => setChatWith(null)}><X size={18} /></button>
             </div>
             <div className="chat-body">
-              {(chats[chatWith.id] || []).length === 0 && (
+              {chatMessages.length === 0 && (
                 <p className="chat-empty">Say hello to start the conversation</p>
               )}
-              {(chats[chatWith.id] || []).map((m, i) => (
-                <div key={i} className={'chat-bubble ' + m.from}>{m.text}</div>
+              {chatMessages.map((m) => (
+                <div
+                  key={m.id}
+                  className={'chat-bubble ' + (m.sender_name === user.name ? 'me' : 'them')}
+                >
+                  {m.message}
+                </div>
               ))}
             </div>
             <div className="chat-input-row">

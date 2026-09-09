@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sprout, ShieldCheck, ArrowLeft } from 'lucide-react'
+import { Sprout, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react'
 import './Login.css'
 
 export default function Login() {
@@ -28,25 +28,7 @@ export default function Login() {
     }, 900)
   }
 
-  const handleOtpChange = (index, value) => {
-    if (!/^\d?$/.test(value)) return
-    const next = [...otp]
-    next[index] = value
-    setOtp(next)
-    if (value && index < 3) {
-      inputsRef.current[index + 1]?.focus()
-    }
-  }
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputsRef.current[index - 1]?.focus()
-    }
-  }
-
-  const handleVerify = (e) => {
-    e.preventDefault()
-    const code = otp.join('')
+  const doVerify = (code) => {
     if (code.length < 4) {
       setError('Enter the 4-digit OTP')
       return
@@ -57,6 +39,50 @@ export default function Login() {
       setLoading(false)
       navigate('/home')
     }, 800)
+  }
+
+  const distributeOtp = (digits) => {
+    const chars = digits.slice(0, 4).split('')
+    const next = ['', '', '', '']
+    chars.forEach((c, i) => (next[i] = c))
+    setOtp(next)
+    if (chars.length >= 4) {
+      inputsRef.current[3]?.blur()
+      doVerify(next.join(''))
+    } else {
+      inputsRef.current[chars.length]?.focus()
+    }
+  }
+
+  const handleOtpChange = (index, value) => {
+    const digitsOnly = value.replace(/\D/g, '')
+    if (digitsOnly.length > 1) {
+      distributeOtp(digitsOnly)
+      return
+    }
+    const next = [...otp]
+    next[index] = digitsOnly
+    setOtp(next)
+    if (digitsOnly && index < 3) {
+      inputsRef.current[index + 1]?.focus()
+    }
+    if (digitsOnly && index === 3 && next.every((d) => d)) {
+      inputsRef.current[index]?.blur()
+      doVerify(next.join(''))
+    }
+  }
+
+  const handleOtpPaste = (e) => {
+    const text = e.clipboardData.getData('text').replace(/\D/g, '')
+    if (!text) return
+    e.preventDefault()
+    distributeOtp(text)
+  }
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputsRef.current[index - 1]?.focus()
+    }
   }
 
   return (
@@ -102,13 +128,13 @@ export default function Login() {
             </p>
           </form>
         ) : (
-          <form onSubmit={handleVerify}>
-            <button type="button" className="back-btn" onClick={() => setStep('phone')}>
+          <div>
+            <button type="button" className="back-btn" onClick={() => setStep('phone')} disabled={loading}>
               <ArrowLeft size={18} />
             </button>
             <h2>Verify OTP</h2>
             <p className="login-sub">
-              Enter the 4-digit code sent to <strong>+91 {phone}</strong>
+              Enter the 4-digit code sent to <strong>+91 {phone}</strong> — it'll verify automatically
             </p>
 
             <div className="otp-inputs">
@@ -118,25 +144,32 @@ export default function Login() {
                   ref={(el) => (inputsRef.current[i] = el)}
                   type="text"
                   inputMode="numeric"
-                  maxLength={1}
+                  maxLength={4}
+                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  onPaste={handleOtpPaste}
                   className={error ? 'error' : ''}
                   autoFocus={i === 0}
+                  disabled={loading}
                 />
               ))}
             </div>
             {error && <p className="field-error center">{error}</p>}
 
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Verifying…' : 'Verify & Continue'}
-            </button>
+            <div className="verify-status" aria-live="polite">
+              {loading && (
+                <>
+                  <Loader2 size={16} className="spin" /> Verifying…
+                </>
+              )}
+            </div>
 
             <p className="resend-note">
               Didn't receive the code? <span>Resend OTP</span>
             </p>
-          </form>
+          </div>
         )}
       </div>
 

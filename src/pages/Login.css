@@ -193,6 +193,30 @@
   border-color: var(--color-danger);
 }
 
+.otp-inputs input:disabled {
+  opacity: 0.6;
+}
+
+.verify-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 20px;
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.verify-status .spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .resend-note {
   text-align: center;
   font-size: 13px;

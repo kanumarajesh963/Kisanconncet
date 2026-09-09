@@ -1,11 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   CloudRain, Power, TrendingUp, Calendar, Stethoscope, ShoppingCart,
   Landmark, Users, ChevronRight, Droplets, Wind, AlertTriangle,
 } from 'lucide-react'
-import {
-  user, weatherToday, motorStatus, mandiPrices, sprayAdvisory,
-} from '../data/mockData.js'
+import { user, motorStatus, mandiPrices } from '../data/mockData.js'
+import { fetchWeatherData } from '../lib/weather.js'
 import './Home.css'
 
 const quickActions = [
@@ -24,6 +24,15 @@ const bestMarket = [...bestMandi.markets].sort((a, b) => b.price - a.price)[0]
 
 export default function Home() {
   const navigate = useNavigate()
+  const [weather, setWeather] = useState(null)
+  const [weatherLoading, setWeatherLoading] = useState(true)
+
+  useEffect(() => {
+    fetchWeatherData()
+      .then((data) => setWeather(data))
+      .catch(() => setWeather(null))
+      .finally(() => setWeatherLoading(false))
+  }, [])
 
   return (
     <div className="home-page">
@@ -38,27 +47,27 @@ export default function Home() {
         </button>
       </div>
 
-      {weatherToday.alert && (
+      {weather?.today.alert && (
         <div className="alert-banner">
           <AlertTriangle size={18} />
           <div>
             <strong>Weather Alert</strong>
-            <p>{weatherToday.alert.message}</p>
+            <p>{weather.today.alert.message}</p>
           </div>
         </div>
       )}
 
       <Link to="/weather" className="weather-card">
         <div className="weather-main">
-          <span className="weather-icon">⛅</span>
+          <span className="weather-icon">{weatherLoading ? '⛅' : weather?.today.icon || '⛅'}</span>
           <div>
-            <h2>{weatherToday.temp}°C</h2>
-            <span>{weatherToday.condition}</span>
+            <h2>{weatherLoading ? '—' : weather ? `${weather.today.temp}°C` : 'N/A'}</h2>
+            <span>{weatherLoading ? 'Loading…' : weather?.today.condition || 'Unavailable'}</span>
           </div>
         </div>
         <div className="weather-meta">
-          <span><Droplets size={14} /> {weatherToday.humidity}%</span>
-          <span><Wind size={14} /> {weatherToday.wind} km/h</span>
+          <span><Droplets size={14} /> {weather ? `${weather.today.humidity}%` : '—'}</span>
+          <span><Wind size={14} /> {weather ? `${weather.today.wind} km/h` : '—'}</span>
         </div>
         <ChevronRight size={18} className="chevron" />
       </Link>
@@ -82,13 +91,15 @@ export default function Home() {
         </Link>
       </div>
 
-      <div className="advisory-card">
-        <div className="advisory-icon">🧪</div>
-        <div>
-          <strong>Today's Spray Advisory</strong>
-          <p>{sprayAdvisory.message}</p>
+      {weather?.sprayAdvisory && (
+        <div className="advisory-card">
+          <div className="advisory-icon">🧪</div>
+          <div>
+            <strong>Today's Spray Advisory</strong>
+            <p>{weather.sprayAdvisory.message}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="section-heading">
         <h2>Quick Access</h2>

@@ -40,6 +40,12 @@
   margin-left: 48px;
 }
 
+.location-fallback-note {
+  font-size: 11px;
+  opacity: 0.7;
+  font-style: italic;
+}
+
 .current-card {
   background: linear-gradient(135deg, #2E7CD6, #1F5FA8);
   color: #fff;

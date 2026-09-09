@@ -6,7 +6,7 @@ export default function ComingSoon({ icon, title, description }) {
   const navigate = useNavigate()
   return (
     <div className="coming-soon">
-      <button className="cs-back" onClick={() => navigate('/home')}>
+      <button className="cs-back-floating" onClick={() => navigate('/home')}>
         <ArrowLeft size={18} />
       </button>
       <div className="cs-icon">{icon}</div>

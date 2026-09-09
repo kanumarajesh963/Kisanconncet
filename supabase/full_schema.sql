@@ -185,3 +185,78 @@ where not exists (select 1 from forum_posts where author_name = 'Dr. Sunanda Rao
 insert into forum_posts (author_name, village, tag, title)
 select 'Prakash Salunkhe', 'Shirwal', 'Success Story', 'Doubled my soybean yield this season — here is what I changed'
 where not exists (select 1 from forum_posts where author_name = 'Prakash Salunkhe');
+
+-- ============ GOVT SCHEMES ============
+
+create table if not exists govt_schemes (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category text not null,
+  short_desc text not null,
+  full_desc text not null,
+  eligibility text not null,
+  benefit text not null,
+  deadline text,
+  department text not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists scheme_applications (
+  id uuid primary key default gen_random_uuid(),
+  scheme_id uuid not null references govt_schemes(id) on delete cascade,
+  applicant_name text not null,
+  status text not null default 'submitted',
+  created_at timestamptz not null default now()
+);
+
+alter table govt_schemes enable row level security;
+alter table scheme_applications enable row level security;
+
+drop policy if exists "public read govt_schemes" on govt_schemes;
+create policy "public read govt_schemes" on govt_schemes for select using (true);
+
+drop policy if exists "public read scheme_applications" on scheme_applications;
+drop policy if exists "public insert scheme_applications" on scheme_applications;
+create policy "public read scheme_applications" on scheme_applications for select using (true);
+create policy "public insert scheme_applications" on scheme_applications for insert with check (true);
+
+insert into govt_schemes (name, category, short_desc, full_desc, eligibility, benefit, deadline, department)
+select * from (values
+  ('PM-KISAN', 'Subsidy',
+   'Direct income support of ₹6,000/year to landholding farmers',
+   'Pradhan Mantri Kisan Samman Nidhi provides income support to all landholding farmer families to supplement their financial needs for agriculture inputs and household needs.',
+   'All landholding farmer families with cultivable land, subject to exclusion criteria (income tax payers, institutional landholders excluded)',
+   '₹6,000 per year in 3 equal installments directly to bank account',
+   'Rolling — apply anytime',
+   'Ministry of Agriculture & Farmers Welfare'),
+  ('Pradhan Mantri Fasal Bima Yojana', 'Insurance',
+   'Crop insurance against yield loss due to natural calamities',
+   'Comprehensive risk cover for crops against non-preventable natural risks from pre-sowing to post-harvest, at a low uniform premium rate for farmers.',
+   'All farmers growing notified crops in notified areas, including sharecroppers and tenant farmers',
+   'Premium as low as 2% for Kharif, 1.5% for Rabi crops; balance subsidized by government',
+   '15 Dec 2026 (Rabi season)',
+   'Ministry of Agriculture & Farmers Welfare'),
+  ('Kisan Credit Card (KCC)', 'Loan',
+   'Short-term credit for cultivation and allied needs at low interest',
+   'KCC provides farmers with timely access to credit for crop production, post-harvest expenses, and farm asset maintenance at concessional interest rates.',
+   'All farmers — owner cultivators, tenant farmers, sharecroppers, and SHG members',
+   'Credit up to ₹3 lakh at 4% effective interest rate (with timely repayment subsidy)',
+   'Rolling — apply anytime',
+   'Ministry of Finance / NABARD'),
+  ('Soil Health Card Scheme', 'Training',
+   'Free soil testing with crop-wise nutrient and fertilizer advice',
+   'Soil samples are tested and farmers receive a Soil Health Card with crop-wise recommendations for nutrients and fertilizers required, once every 2 years.',
+   'All farmers with agricultural land, no income restriction',
+   'Free soil testing and personalized fertilizer recommendations',
+   'Ongoing — contact local Krishi Vigyan Kendra',
+   'Department of Agriculture, Cooperation & Farmers Welfare'),
+  ('PM Kisan Maan Dhan Yojana', 'Insurance',
+   'Pension scheme for small and marginal farmers',
+   'A voluntary pension scheme providing ₹3,000 monthly pension after the age of 60 to small and marginal farmers, with matching government contribution.',
+   'Small and marginal farmers aged 18-40 years with up to 2 hectares of cultivable land',
+   '₹3,000/month pension after age 60; matching contribution by government',
+   'Rolling — apply anytime',
+   'Ministry of Agriculture & Farmers Welfare'
+  )
+) as v(name, category, short_desc, full_desc, eligibility, benefit, deadline, department)
+where not exists (select 1 from govt_schemes);

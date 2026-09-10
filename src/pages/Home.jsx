@@ -43,7 +43,7 @@ export default function Home() {
           <p className="greeting-eyebrow">Namaste 🙏</p>
           <h1>{user.name.split(' ')[0]}</h1>
           <span className="home-location">
-            {weather?.today.location || (weatherLoading ? 'Detecting location…' : 'Location unavailable')}
+            {weather?.today.location || (weatherLoading ? t('home.detectingLocation') : t('home.locationUnavailable'))}
           </span>
         </div>
         <button className="avatar-btn" onClick={() => navigate('/profile')}>
@@ -55,8 +55,8 @@ export default function Home() {
         <div className="weather-main">
           <span className="weather-icon">{weatherLoading ? '⛅' : weather?.today.icon || '⛅'}</span>
           <div>
-            <h2>{weatherLoading ? '—' : weather ? `${weather.today.temp}°C` : 'N/A'}</h2>
-            <span>{weatherLoading ? 'Loading…' : weather?.today.condition || 'Unavailable'}</span>
+            <h2>{weatherLoading ? '—' : weather ? `${weather.today.temp}°C` : t('home.notAvailable')}</h2>
+            <span>{weatherLoading ? t('home.loading') : weather?.today.condition || t('home.unavailable')}</span>
           </div>
         </div>
         <div className="weather-meta">
@@ -73,7 +73,7 @@ export default function Home() {
             <span className={'status-dot ' + (motorStatus.isOn ? 'on' : 'off')} />
           </div>
           <h3>{motorStatus.name}</h3>
-          <p>{motorStatus.isOn ? 'Running' : 'Currently OFF'}</p>
+          <p>{motorStatus.isOn ? t('home.running') : t('home.currentlyOff')}</p>
         </Link>
 
         <Link to="/mandi" className="stat-card">

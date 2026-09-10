@@ -33,6 +33,13 @@ const dict = {
 
     'home.quickAccess': 'Quick Access',
     'home.sprayAdvisory': "Today's Spray Advisory",
+    'home.detectingLocation': 'Detecting location…',
+    'home.locationUnavailable': 'Location unavailable',
+    'home.loading': 'Loading…',
+    'home.notAvailable': 'N/A',
+    'home.unavailable': 'Unavailable',
+    'home.running': 'Running',
+    'home.currentlyOff': 'Currently OFF',
 
     'quick.weather': 'Weather',
     'quick.mandi': 'Mandi Prices',
@@ -94,6 +101,13 @@ const dict = {
 
     'home.quickAccess': 'त्वरित पहुंच',
     'home.sprayAdvisory': 'आज की स्प्रे सलाह',
+    'home.detectingLocation': 'स्थान का पता लगाया जा रहा है…',
+    'home.locationUnavailable': 'स्थान अनुपलब्ध',
+    'home.loading': 'लोड हो रहा है…',
+    'home.notAvailable': 'उपलब्ध नहीं',
+    'home.unavailable': 'अनुपलब्ध',
+    'home.running': 'चल रहा है',
+    'home.currentlyOff': 'वर्तमान में बंद',
 
     'quick.weather': 'मौसम',
     'quick.mandi': 'मंडी भाव',
@@ -155,6 +169,13 @@ const dict = {
 
     'home.quickAccess': 'जलद प्रवेश',
     'home.sprayAdvisory': 'आजचा फवारणी सल्ला',
+    'home.detectingLocation': 'स्थान शोधत आहे…',
+    'home.locationUnavailable': 'स्थान अनुपलब्ध',
+    'home.loading': 'लोड होत आहे…',
+    'home.notAvailable': 'उपलब्ध नाही',
+    'home.unavailable': 'अनुपलब्ध',
+    'home.running': 'चालू आहे',
+    'home.currentlyOff': 'सध्या बंद',
 
     'quick.weather': 'हवामान',
     'quick.mandi': 'बाजार भाव',
@@ -216,6 +237,13 @@ const dict = {
 
     'home.quickAccess': 'త్వరిత యాక్సెస్',
     'home.sprayAdvisory': 'నేటి స్ప్రే సలహా',
+    'home.detectingLocation': 'స్థానాన్ని గుర్తిస్తోంది…',
+    'home.locationUnavailable': 'స్థానం అందుబాటులో లేదు',
+    'home.loading': 'లోడ్ అవుతోంది…',
+    'home.notAvailable': 'అందుబాటులో లేదు',
+    'home.unavailable': 'అందుబాటులో లేదు',
+    'home.running': 'నడుస్తోంది',
+    'home.currentlyOff': 'ప్రస్తుతం ఆఫ్‌లో ఉంది',
 
     'quick.weather': 'వాతావరణం',
     'quick.mandi': 'మార్కెట్ ధరలు',

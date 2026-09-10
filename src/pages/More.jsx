@@ -6,21 +6,23 @@ import {
 } from 'lucide-react'
 import { user } from '../data/mockData.js'
 import { getLocationLabel } from '../lib/weather.js'
+import { useLanguage } from '../lib/i18n.jsx'
 import './More.css'
 
 const items = [
-  { to: '/calendar', icon: Calendar, label: 'Farming Calendar', desc: 'Sowing, irrigation & harvest reminders' },
-  { to: '/crop-doctor', icon: Stethoscope, label: 'Crop Doctor (AI)', desc: 'Photo-based disease detection' },
-  { to: '/marketplace', icon: ShoppingCart, label: 'Marketplace', desc: 'Buy & sell produce directly' },
-  { to: '/schemes', icon: Landmark, label: 'Govt Schemes', desc: 'Subsidies & eligibility checker' },
-  { to: '/equipment', icon: Tractor, label: 'Equipment Rental', desc: 'Tractors, harvesters & drones' },
-  { to: '/loans', icon: Banknote, label: 'Loans & Insurance', desc: 'Compare crop loan offers' },
-  { to: '/soil-health', icon: Leaf, label: 'Soil Health Advisor', desc: 'Soil report & fertilizer advice' },
-  { to: '/community', icon: Users, label: 'Community Forum', desc: 'Q&A, experts & success stories' },
+  { to: '/calendar', icon: Calendar, labelKey: 'more.calendar.label', descKey: 'more.calendar.desc' },
+  { to: '/crop-doctor', icon: Stethoscope, labelKey: 'more.cropDoctor.label', descKey: 'more.cropDoctor.desc' },
+  { to: '/marketplace', icon: ShoppingCart, labelKey: 'more.marketplace.label', descKey: 'more.marketplace.desc' },
+  { to: '/schemes', icon: Landmark, labelKey: 'more.schemes.label', descKey: 'more.schemes.desc' },
+  { to: '/equipment', icon: Tractor, labelKey: 'more.equipment.label', descKey: 'more.equipment.desc' },
+  { to: '/loans', icon: Banknote, labelKey: 'more.loans.label', descKey: 'more.loans.desc' },
+  { to: '/soil-health', icon: Leaf, labelKey: 'more.soilHealth.label', descKey: 'more.soilHealth.desc' },
+  { to: '/community', icon: Users, labelKey: 'more.community.label', descKey: 'more.community.desc' },
 ]
 
 export default function More() {
   const [location, setLocation] = useState('Detecting location…')
+  const { t } = useLanguage()
 
   useEffect(() => {
     getLocationLabel().then((loc) => setLocation(loc || 'Location unavailable'))
@@ -29,8 +31,8 @@ export default function More() {
   return (
     <div className="more-page">
       <div className="more-header">
-        <h1>More</h1>
-        <p>Explore all KisanConnect features</p>
+        <h1>{t('more.title')}</h1>
+        <p>{t('more.subtitle')}</p>
       </div>
 
       <Link to="/profile" className="profile-row">
@@ -45,13 +47,13 @@ export default function More() {
       </Link>
 
       <div className="more-grid">
-        {items.map(({ to, icon: Icon, label, desc }) => (
+        {items.map(({ to, icon: Icon, labelKey, descKey }) => (
           <Link to={to} key={to} className="more-card">
             <div className="more-icon">
               <Icon size={20} strokeWidth={2} />
             </div>
-            <h4>{label}</h4>
-            <p>{desc}</p>
+            <h4>{t(labelKey)}</h4>
+            <p>{t(descKey)}</p>
           </Link>
         ))}
       </div>

@@ -1,6 +1,6 @@
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY
 const BASE_URL = 'https://api.openweathermap.org/data/2.5'
-const CACHE_KEY = 'kc_weather_cache_v1'
+const CACHE_KEY = 'kc_weather_cache_v2'
 const GPS_CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes for a precise GPS result
 const IP_CACHE_TTL_MS = 60 * 1000 // 1 minute for IP-based — retry GPS again soon
 
@@ -10,6 +10,14 @@ let inFlightRequest = null
 const ICON_MAP = {
   '01': '☀️', '02': '⛅', '03': '☁️', '04': '☁️',
   '09': '🌧️', '10': '🌦️', '11': '🌩️', '13': '❄️', '50': '🌫️',
+}
+
+const AQI_LEVELS = {
+  1: { label: 'Good', color: '#1F8A45' },
+  2: { label: 'Fair', color: '#7CB342' },
+  3: { label: 'Moderate', color: '#F5A623' },
+  4: { label: 'Poor', color: '#E8743B' },
+  5: { label: 'Very Poor', color: '#E14B4B' },
 }
 
 function iconFor(owmIcon) {
@@ -79,6 +87,49 @@ async function reverseGeocode(lat, lon) {
   }
 }
 
+async function fetchAirQuality(lat, lon) {
+  try {
+    const res = await fetch(`${BASE_URL}/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    const entry = data.list?.[0]
+    if (!entry) return null
+    const level = AQI_LEVELS[entry.main.aqi] || AQI_LEVELS[3]
+    return {
+      aqi: entry.main.aqi,
+      label: level.label,
+      color: level.color,
+      pm2_5: Math.round(entry.components.pm2_5),
+      pm10: Math.round(entry.components.pm10),
+      o3: Math.round(entry.components.o3),
+    }
+  } catch {
+    return null
+  }
+}
+
+// Astronomically computed moon phase — not an API call, just math from the date.
+function getMoonPhase(date) {
+  const knownNewMoon = Date.UTC(2000, 0, 6, 18, 14, 0)
+  const synodicMonth = 29.53058867
+  const diffDays = (date.getTime() - knownNewMoon) / 86400000
+  const age = ((diffDays % synodicMonth) + synodicMonth) % synodicMonth
+  const p = age / synodicMonth
+  const illumination = Math.round((1 - Math.cos(p * 2 * Math.PI)) / 2 * 100)
+
+  let name, emoji
+  if (p < 0.03 || p > 0.97) { name = 'New Moon'; emoji = '🌑' }
+  else if (p < 0.22) { name = 'Waxing Crescent'; emoji = '🌒' }
+  else if (p < 0.28) { name = 'First Quarter'; emoji = '🌓' }
+  else if (p < 0.47) { name = 'Waxing Gibbous'; emoji = '🌔' }
+  else if (p < 0.53) { name = 'Full Moon'; emoji = '🌕' }
+  else if (p < 0.72) { name = 'Waning Gibbous'; emoji = '🌖' }
+  else if (p < 0.78) { name = 'Last Quarter'; emoji = '🌗' }
+  else { name = 'Waning Crescent'; emoji = '🌘' }
+
+  return { name, emoji, illumination }
+}
+
 function ttlFor(data) {
   return data.today.locationSource === 'gps' ? GPS_CACHE_TTL_MS : IP_CACHE_TTL_MS
 }
@@ -120,9 +171,11 @@ export async function getLocationLabel() {
   }
 }
 
-export async function fetchWeatherData() {
-  const cached = readCache()
-  if (cached) return cached
+export async function fetchWeatherData({ force = false } = {}) {
+  if (!force) {
+    const cached = readCache()
+    if (cached) return cached
+  }
 
   if (inFlightRequest) return inFlightRequest
 
@@ -147,10 +200,11 @@ async function fetchWeatherDataUncached() {
 
   const { lat, lon, source, label } = await resolveLocation()
 
-  const [currentRes, forecastRes, locationName] = await Promise.all([
+  const [currentRes, forecastRes, locationName, airQuality] = await Promise.all([
     fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`),
     fetch(`${BASE_URL}/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`),
     source === 'gps' ? reverseGeocode(lat, lon) : Promise.resolve(label),
+    fetchAirQuality(lat, lon),
   ])
 
   const coordsLabel =
@@ -187,6 +241,13 @@ async function fetchWeatherDataUncached() {
       }
     })
 
+  const hourly = forecast.list.slice(0, 8).map((e, i) => ({
+    time: i === 0 ? 'Now' : new Date(e.dt * 1000).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true }),
+    icon: iconFor(e.weather[0].icon),
+    temp: Math.round(e.main.temp),
+    rain: Math.round((e.pop || 0) * 100),
+  }))
+
   const next24h = forecast.list.slice(0, 8)
   const maxRainChance = Math.round(Math.max(...next24h.map((e) => e.pop || 0)) * 100)
   const avgWind = Math.round(current.wind.speed * 3.6)
@@ -222,22 +283,36 @@ async function fetchWeatherDataUncached() {
       hour: 'numeric', minute: '2-digit', hour12: true,
     })
 
+  const nowSec = Date.now() / 1000
+  const dayProgress = Math.min(
+    1,
+    Math.max(0, (nowSec - current.sys.sunrise) / (current.sys.sunset - current.sys.sunrise))
+  )
+
   return {
     today: {
       location: locationName || 'Unknown location',
       coordsLabel,
       locationSource: source,
       temp: Math.round(current.main.temp),
+      feelsLike: Math.round(current.main.feels_like),
       condition: current.weather[0].main,
       icon: iconFor(current.weather[0].icon),
       humidity: current.main.humidity,
       wind: avgWind,
+      windDeg: current.wind.deg,
+      pressure: current.main.pressure,
+      visibility: current.visibility != null ? (current.visibility / 1000).toFixed(1) : null,
       rainChance: maxRainChance,
       alert,
       sunrise: fmtTime(current.sys.sunrise),
       sunset: fmtTime(current.sys.sunset),
+      dayProgress,
     },
     forecast: days,
+    hourly,
+    airQuality,
+    moonPhase: getMoonPhase(new Date()),
     sprayAdvisory,
   }
 }

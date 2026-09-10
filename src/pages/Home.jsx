@@ -2,21 +2,22 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   CloudRain, Power, TrendingUp, Calendar, Stethoscope, ShoppingCart,
-  Landmark, Users, ChevronRight, Droplets, Wind, AlertTriangle,
+  Landmark, Users, ChevronRight, Droplets, Wind,
 } from 'lucide-react'
 import { user, motorStatus, mandiPrices } from '../data/mockData.js'
 import { fetchWeatherData } from '../lib/weather.js'
+import { useLanguage } from '../lib/i18n.jsx'
 import './Home.css'
 
 const quickActions = [
-  { to: '/weather', icon: CloudRain, label: 'Weather', color: '#2E7CD6', bg: '#E8F1FC' },
-  { to: '/mandi', icon: TrendingUp, label: 'Mandi Prices', color: '#F5A623', bg: '#FDF3E2' },
-  { to: '/motor', icon: Power, label: 'Motor Control', color: '#1F8A45', bg: '#E6F4EA' },
-  { to: '/calendar', icon: Calendar, label: 'Calendar', color: '#8B5CF6', bg: '#F1EBFD' },
-  { to: '/crop-doctor', icon: Stethoscope, label: 'Crop Doctor', color: '#E14B4B', bg: '#FBEAEA' },
-  { to: '/marketplace', icon: ShoppingCart, label: 'Marketplace', color: '#0EA5A5', bg: '#E3F6F6' },
-  { to: '/schemes', icon: Landmark, label: 'Govt Schemes', color: '#B45309', bg: '#FBEEDD' },
-  { to: '/community', icon: Users, label: 'Community', color: '#DB2777', bg: '#FCE7F1' },
+  { to: '/weather', icon: CloudRain, key: 'quick.weather', color: '#2E7CD6', bg: '#E8F1FC' },
+  { to: '/mandi', icon: TrendingUp, key: 'quick.mandi', color: '#F5A623', bg: '#FDF3E2' },
+  { to: '/motor', icon: Power, key: 'quick.motor', color: '#1F8A45', bg: '#E6F4EA' },
+  { to: '/calendar', icon: Calendar, key: 'quick.calendar', color: '#8B5CF6', bg: '#F1EBFD' },
+  { to: '/crop-doctor', icon: Stethoscope, key: 'quick.cropDoctor', color: '#E14B4B', bg: '#FBEAEA' },
+  { to: '/marketplace', icon: ShoppingCart, key: 'quick.marketplace', color: '#0EA5A5', bg: '#E3F6F6' },
+  { to: '/schemes', icon: Landmark, key: 'quick.schemes', color: '#B45309', bg: '#FBEEDD' },
+  { to: '/community', icon: Users, key: 'quick.community', color: '#DB2777', bg: '#FCE7F1' },
 ]
 
 const bestMandi = mandiPrices[0]
@@ -24,6 +25,7 @@ const bestMarket = [...bestMandi.markets].sort((a, b) => b.price - a.price)[0]
 
 export default function Home() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [weather, setWeather] = useState(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
 
@@ -48,16 +50,6 @@ export default function Home() {
           {user.name.charAt(0)}
         </button>
       </div>
-
-      {weather?.today.alert && (
-        <div className="alert-banner">
-          <AlertTriangle size={18} />
-          <div>
-            <strong>Weather Alert</strong>
-            <p>{weather.today.alert.message}</p>
-          </div>
-        </div>
-      )}
 
       <Link to="/weather" className="weather-card">
         <div className="weather-main">
@@ -97,23 +89,23 @@ export default function Home() {
         <div className="advisory-card">
           <div className="advisory-icon">🧪</div>
           <div>
-            <strong>Today's Spray Advisory</strong>
+            <strong>{t('home.sprayAdvisory')}</strong>
             <p>{weather.sprayAdvisory.message}</p>
           </div>
         </div>
       )}
 
       <div className="section-heading">
-        <h2>Quick Access</h2>
+        <h2>{t('home.quickAccess')}</h2>
       </div>
 
       <div className="quick-grid">
-        {quickActions.map(({ to, icon: Icon, label, color, bg }) => (
+        {quickActions.map(({ to, icon: Icon, key, color, bg }) => (
           <Link to={to} key={to} className="quick-item">
             <div className="quick-icon" style={{ background: bg, color }}>
               <Icon size={20} strokeWidth={2} />
             </div>
-            <span>{label}</span>
+            <span>{t(key)}</span>
           </Link>
         ))}
       </div>

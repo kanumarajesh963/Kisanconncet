@@ -54,6 +54,10 @@
     background: #EDEFEA;
   }
 
+  :root[data-theme="dark"] body {
+    background: #0A0C0D;
+  }
+
   .phone-frame {
     margin: 16px auto;
     min-height: calc(100vh - 32px);

@@ -1,10 +1,12 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sprout, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react'
+import { useLanguage } from '../lib/i18n.jsx'
 import './Login.css'
 
 export default function Login() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [step, setStep] = useState('phone')
   const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState(['', '', '', ''])
@@ -93,16 +95,16 @@ export default function Login() {
           <Sprout size={28} strokeWidth={2.4} />
         </div>
         <h1>KisanConnect</h1>
-        <p>Your complete farming companion</p>
+        <p>{t('login.tagline')}</p>
       </div>
 
       <div className="login-card">
         {step === 'phone' ? (
           <form onSubmit={handleSendOtp}>
-            <h2>Login to continue</h2>
-            <p className="login-sub">We'll send a one-time password to verify your number</p>
+            <h2>{t('login.loginTitle')}</h2>
+            <p className="login-sub">{t('login.loginSub')}</p>
 
-            <label className="field-label">Mobile Number</label>
+            <label className="field-label">{t('login.mobileLabel')}</label>
             <div className={'phone-input' + (error ? ' error' : '')}>
               <span className="country-code">+91</span>
               <input
@@ -121,11 +123,11 @@ export default function Login() {
             {error && <p className="field-error">{error}</p>}
 
             <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Sending OTP…' : 'Send OTP'}
+              {loading ? t('login.sendingOtp') : t('login.sendOtp')}
             </button>
 
             <p className="terms-note">
-              By continuing, you agree to KisanConnect's Terms of Service &amp; Privacy Policy
+              {t('login.terms')}
             </p>
           </form>
         ) : (
@@ -133,9 +135,9 @@ export default function Login() {
             <button type="button" className="back-btn" onClick={() => setStep('phone')} disabled={loading}>
               <ArrowLeft size={18} />
             </button>
-            <h2>Verify OTP</h2>
+            <h2>{t('login.verifyTitle')}</h2>
             <p className="login-sub">
-              Enter the 4-digit code sent to <strong>+91 {phone}</strong> — it'll verify automatically
+              Enter the 4-digit code sent to <strong>+91 {phone}</strong> — {t('login.verifyAuto')}
             </p>
 
             <div className="otp-inputs">
@@ -162,13 +164,13 @@ export default function Login() {
             <div className="verify-status" aria-live="polite">
               {loading && (
                 <>
-                  <Loader2 size={16} className="spin" /> Verifying…
+                  <Loader2 size={16} className="spin" /> {t('login.verifying')}
                 </>
               )}
             </div>
 
             <p className="resend-note">
-              Didn't receive the code? <span>Resend OTP</span>
+              {t('login.resendPrompt')} <span>{t('login.resendAction')}</span>
             </p>
           </div>
         )}
@@ -176,7 +178,7 @@ export default function Login() {
 
       <div className="login-trust">
         <ShieldCheck size={16} />
-        <span>Secure OTP login · Trusted by 50,000+ farmers</span>
+        <span>{t('login.trust')}</span>
       </div>
     </div>
   )

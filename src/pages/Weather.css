@@ -13,6 +13,29 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
+  flex: 1;
+}
+
+.refresh-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.6;
+}
+
+.refresh-btn .spin {
+  animation: spin 1s linear infinite;
 }
 
 .cs-back {
@@ -36,16 +59,8 @@
   font-size: 12.5px;
   color: var(--color-text-muted);
   font-weight: 500;
-  margin-left: 48px;
-}
-
-.coords-row {
-  font-size: 10.5px;
-  color: var(--color-text-muted);
-  opacity: 0.7;
   margin-bottom: 16px;
   margin-left: 48px;
-  font-family: monospace;
 }
 
 .location-fallback-note {
@@ -54,57 +69,59 @@
   font-style: italic;
 }
 
-.current-card {
-  background: linear-gradient(135deg, #2E7CD6, #1F5FA8);
-  color: #fff;
-  border-radius: var(--radius-lg);
-  padding: 22px;
-  margin-bottom: 16px;
-  box-shadow: var(--shadow-sm);
+.hero-section {
+  padding: 4px 4px 22px;
 }
 
-.current-top {
+.hero-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 8px;
 }
 
-.current-top h2 {
+.hero-top h2 {
   margin: 0;
-  font-size: 40px;
+  font-size: 68px;
   font-weight: 800;
   line-height: 1;
+  color: var(--color-text);
 }
 
-.current-top span {
-  font-size: 13px;
-  opacity: 0.9;
+.hero-top h2 sup {
+  font-size: 32px;
+  font-weight: 700;
+  top: -0.6em;
 }
 
-.current-icon {
-  font-size: 52px;
+.hero-icon {
+  font-size: 48px;
 }
 
-.current-stats {
+.hero-summary {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.hero-stats {
   display: flex;
-  justify-content: space-between;
-  border-top: 1px solid rgba(255,255,255,0.2);
-  padding-top: 16px;
+  gap: 18px;
+  flex-wrap: wrap;
 }
 
-.current-stat {
+.hero-stats span {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 5px;
-  font-size: 11px;
-  opacity: 0.95;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text);
 }
 
-.current-stat strong {
-  font-size: 14px;
-  font-weight: 700;
+.hero-stats svg {
+  color: var(--color-primary);
 }
 
 .alert-banner-lg {
@@ -235,35 +252,222 @@
   font-weight: 600;
 }
 
-.sun-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+.hourly-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 22px;
 }
 
-.sun-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.hourly-card {
+  flex-shrink: 0;
+  width: 62px;
   background: var(--color-surface);
   border-radius: var(--radius-md);
-  padding: 14px;
   box-shadow: var(--shadow-sm);
-  color: var(--color-accent);
-}
-
-.sun-card div {
+  padding: 12px 6px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 5px;
 }
 
-.sun-card strong {
-  font-size: 13.5px;
-  color: var(--color-text);
+.hourly-card.now {
+  background: var(--color-primary-light);
+}
+
+.hourly-time {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.hourly-icon {
+  font-size: 20px;
+}
+
+.hourly-temp {
+  font-size: 13px;
   font-weight: 700;
 }
 
-.sun-card span {
+.hourly-rain {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 9.5px;
+  color: #2E7CD6;
+  font-weight: 600;
+}
+
+.trend-chart-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 14px 8px 6px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 18px;
+}
+
+.aqi-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 22px;
+}
+
+.aqi-gauge {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.aqi-gauge-inner {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px;
+}
+
+.aqi-gauge-inner strong {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.aqi-gauge-inner span {
   font-size: 11px;
   color: var(--color-text-muted);
+}
+
+.aqi-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.aqi-label {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.aqi-components {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+.sun-arc-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px 18px 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 14px;
+}
+
+.sun-arc-track {
+  position: relative;
+  height: 6px;
+  background: #EEF1EE;
+  border-radius: 100px;
+  margin-bottom: 14px;
+}
+
+.sun-arc-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #F5A623, #E8743B);
+  border-radius: 100px;
+}
+
+.sun-arc-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+}
+
+.sun-arc-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.sun-arc-labels div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.moon-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 22px;
+}
+
+.moon-emoji {
+  font-size: 36px;
+}
+
+.moon-card strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.moon-card p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.detail-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 14px 8px;
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-muted);
+}
+
+.detail-tile strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.detail-tile span {
+  font-size: 10px;
+  text-align: center;
 }

@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, MapPin, Phone, Sprout, LogOut, ChevronRight, Globe, Bell,
-  HelpCircle, X, Check, Mail, MessageCircle, CheckCircle2,
+  HelpCircle, X, Check, Mail, MessageCircle, CheckCircle2, Moon,
 } from 'lucide-react'
 import { user } from '../data/mockData.js'
 import { getLocationLabel } from '../lib/weather.js'
+import { useLanguage, LANGUAGES } from '../lib/i18n.jsx'
+import { getTheme, applyTheme } from '../lib/theme.js'
 import './Profile.css'
-
-const languages = ['English', 'हिंदी (Hindi)', 'मराठी (Marathi)', 'తెలుగు (Telugu)']
 
 function loadPref(key, fallback) {
   try {
@@ -21,8 +21,9 @@ function loadPref(key, fallback) {
 
 export default function Profile() {
   const navigate = useNavigate()
-  const [language, setLanguage] = useState(() => loadPref('kc_language', 'English'))
+  const { lang, setLang, t } = useLanguage()
   const [notificationsOn, setNotificationsOn] = useState(() => loadPref('kc_notifications', true))
+  const [darkMode, setDarkMode] = useState(() => getTheme() === 'dark')
   const [phone] = useState(() => loadPref('kc_user_phone', user.phone))
   const [location, setLocation] = useState('Detecting location…')
   const [showLangSheet, setShowLangSheet] = useState(false)
@@ -38,15 +39,10 @@ export default function Profile() {
     setTimeout(() => setToast(''), 2200)
   }
 
-  const selectLanguage = (lang) => {
-    setLanguage(lang)
-    sessionStorage.setItem('kc_language', JSON.stringify(lang))
+  const selectLanguage = (code, label) => {
+    setLang(code)
     setShowLangSheet(false)
-    if (lang === 'English') {
-      showToast('Language set to English')
-    } else {
-      showToast(`${lang} selected — full app translation coming soon`)
-    }
+    showToast(`Language set to ${label}`)
   }
 
   const toggleNotifications = () => {
@@ -56,13 +52,21 @@ export default function Profile() {
     showToast(next ? 'Notifications turned on' : 'Notifications turned off')
   }
 
+  const toggleDarkMode = () => {
+    const next = !darkMode
+    setDarkMode(next)
+    applyTheme(next ? 'dark' : 'light')
+  }
+
+  const currentLangLabel = LANGUAGES.find((l) => l.code === lang)?.label || 'English'
+
   return (
     <div className="profile-page">
       <div className="profile-header">
         <button className="cs-back" onClick={() => navigate('/home')}>
           <ArrowLeft size={18} />
         </button>
-        <h1>My Profile</h1>
+        <h1>{t('profile.title')}</h1>
       </div>
 
       <div className="profile-card">
@@ -77,11 +81,11 @@ export default function Profile() {
       <div className="profile-stats">
         <div className="stat">
           <span className="stat-value">{user.farmSize}</span>
-          <span className="stat-label">Farm Size</span>
+          <span className="stat-label">{t('profile.farmSize')}</span>
         </div>
         <div className="stat">
           <span className="stat-value">{user.crops.length}</span>
-          <span className="stat-label">Active Crops</span>
+          <span className="stat-label">{t('profile.activeCrops')}</span>
         </div>
       </div>
 
@@ -95,18 +99,29 @@ export default function Profile() {
         <button className="menu-row" onClick={() => setShowLangSheet(true)}>
           <div className="menu-left">
             <Globe size={18} />
-            <span>App Language</span>
+            <span>{t('profile.appLanguage')}</span>
           </div>
           <div className="menu-right">
-            <span>{language}</span>
+            <span>{currentLangLabel}</span>
             <ChevronRight size={16} />
           </div>
         </button>
 
         <div className="menu-row">
           <div className="menu-left">
+            <Moon size={18} />
+            <span>{t('profile.darkMode')}</span>
+          </div>
+          <label className="switch">
+            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
+            <span className="slider" />
+          </label>
+        </div>
+
+        <div className="menu-row">
+          <div className="menu-left">
             <Bell size={18} />
-            <span>Notifications</span>
+            <span>{t('profile.notifications')}</span>
           </div>
           <label className="switch">
             <input type="checkbox" checked={notificationsOn} onChange={toggleNotifications} />
@@ -117,33 +132,32 @@ export default function Profile() {
         <button className="menu-row" onClick={() => setShowHelpSheet(true)}>
           <div className="menu-left">
             <HelpCircle size={18} />
-            <span>Help &amp; Support</span>
+            <span>{t('profile.helpSupport')}</span>
           </div>
           <ChevronRight size={16} />
         </button>
       </div>
 
       <button className="logout-btn" onClick={() => navigate('/')}>
-        <LogOut size={17} /> Log Out
+        <LogOut size={17} /> {t('profile.logout')}
       </button>
 
       {showLangSheet && (
         <div className="bid-sheet-overlay" onClick={() => setShowLangSheet(false)}>
           <div className="bid-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-header">
-              <h3>App Language</h3>
+              <h3>{t('profile.appLanguage')}</h3>
               <button onClick={() => setShowLangSheet(false)}><X size={18} /></button>
             </div>
-            <p className="sheet-sub">Full translation is being rolled out — English is fully supported today.</p>
             <div className="lang-list">
-              {languages.map((lang) => (
+              {LANGUAGES.map(({ code, label }) => (
                 <button
-                  key={lang}
-                  className={'lang-row' + (language === lang ? ' active' : '')}
-                  onClick={() => selectLanguage(lang)}
+                  key={code}
+                  className={'lang-row' + (lang === code ? ' active' : '')}
+                  onClick={() => selectLanguage(code, label)}
                 >
-                  {lang}
-                  {language === lang && <Check size={16} />}
+                  {label}
+                  {lang === code && <Check size={16} />}
                 </button>
               ))}
             </div>
@@ -155,7 +169,7 @@ export default function Profile() {
         <div className="bid-sheet-overlay" onClick={() => setShowHelpSheet(false)}>
           <div className="bid-sheet" onClick={(e) => e.stopPropagation()}>
             <div className="sheet-header">
-              <h3>Help &amp; Support</h3>
+              <h3>{t('profile.helpSupport')}</h3>
               <button onClick={() => setShowHelpSheet(false)}><X size={18} /></button>
             </div>
             <p className="sheet-sub">We're here to help with any questions about KisanConnect.</p>

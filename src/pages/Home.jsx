@@ -40,7 +40,9 @@ export default function Home() {
         <div>
           <p className="greeting-eyebrow">Namaste 🙏</p>
           <h1>{user.name.split(' ')[0]}</h1>
-          <span className="home-location">{user.village}</span>
+          <span className="home-location">
+            {weather?.today.location || (weatherLoading ? 'Detecting location…' : 'Location unavailable')}
+          </span>
         </div>
         <button className="avatar-btn" onClick={() => navigate('/profile')}>
           {user.name.charAt(0)}

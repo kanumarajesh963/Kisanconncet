@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { user } from '../data/mockData.js'
+import { getLocationLabel } from '../lib/weather.js'
 import './Community.css'
 
 const tagStyle = {
@@ -40,6 +41,11 @@ export default function Community() {
   const [replyPost, setReplyPost] = useState(null)
   const [replies, setReplies] = useState([])
   const [replyInput, setReplyInput] = useState('')
+  const [myLocation, setMyLocation] = useState('')
+
+  useEffect(() => {
+    getLocationLabel().then((loc) => setMyLocation(loc || ''))
+  }, [])
 
   const loadPosts = useCallback(async () => {
     setLoading(true)
@@ -101,7 +107,7 @@ export default function Community() {
       .from('forum_posts')
       .insert({
         author_name: user.name,
-        village: user.village.split(',')[0],
+        village: myLocation.split(',')[0] || 'Unknown location',
         tag: newTag,
         title: newTitle.trim(),
       })

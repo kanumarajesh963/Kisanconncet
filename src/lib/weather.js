@@ -1,16 +1,11 @@
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY
 const BASE_URL = 'https://api.openweathermap.org/data/2.5'
 const CACHE_KEY = 'kc_weather_cache_v1'
-const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes for a real GPS-based result
-const FALLBACK_CACHE_TTL_MS = 20 * 1000 // 20 seconds when location fell back — retry soon
+const GPS_CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes for a precise GPS result
+const IP_CACHE_TTL_MS = 60 * 1000 // 1 minute for IP-based — retry GPS again soon
 
 let memoryCache = null
 let inFlightRequest = null
-
-// Fallback location when live GPS isn't available: Hyderabad, Telangana
-const LAT = 17.385
-const LON = 78.4867
-const FALLBACK_LABEL = 'Hyderabad, Telangana'
 
 const ICON_MAP = {
   '01': '☀️', '02': '⛅', '03': '☁️', '04': '☁️',
@@ -26,36 +21,66 @@ function dayLabel(dt, index) {
   return new Date(dt * 1000).toLocaleDateString('en-US', { weekday: 'short' })
 }
 
-export function getCurrentCoords() {
-  return new Promise((resolve) => {
+function getGpsCoords() {
+  return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      resolve({ lat: LAT, lon: LON, isLive: false })
+      reject(new Error('Geolocation not supported'))
       return
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, isLive: true }),
-      () => resolve({ lat: LAT, lon: LON, isLive: false }),
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, source: 'gps' }),
+      (err) => reject(err),
       { timeout: 8000 }
     )
   })
 }
 
+async function getIpCoords() {
+  const res = await fetch('https://ipapi.co/json/')
+  if (!res.ok) throw new Error('IP location lookup failed')
+  const data = await res.json()
+  if (!data.latitude || !data.longitude) throw new Error('IP location lookup returned no coordinates')
+  return {
+    lat: data.latitude,
+    lon: data.longitude,
+    source: 'ip',
+    label: [data.city, data.region].filter(Boolean).join(', '),
+  }
+}
+
+async function resolveLocation() {
+  try {
+    return await getGpsCoords()
+  } catch {
+    return await getIpCoords()
+  }
+}
+
 async function reverseGeocode(lat, lon) {
   try {
     const res = await fetch(
-      `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${API_KEY}`
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=16&addressdetails=1`,
+      { headers: { Accept: 'application/json' } }
     )
     if (!res.ok) return null
-    const [place] = await res.json()
-    if (!place) return null
-    return [place.name, place.state].filter(Boolean).join(', ')
+    const data = await res.json()
+    const addr = data.address
+    if (!addr) return null
+    const locality =
+      addr.suburb || addr.neighbourhood || addr.residential || addr.quarter ||
+      addr.village || addr.town || addr.city_district || addr.city
+    const city = addr.city || addr.town || addr.state_district
+    if (locality && city && locality !== city) {
+      return `${locality}, ${city}`
+    }
+    return locality || city || addr.state || null
   } catch {
     return null
   }
 }
 
 function ttlFor(data) {
-  return data.today.isLiveLocation ? CACHE_TTL_MS : FALLBACK_CACHE_TTL_MS
+  return data.today.locationSource === 'gps' ? GPS_CACHE_TTL_MS : IP_CACHE_TTL_MS
 }
 
 function readCache() {
@@ -86,6 +111,15 @@ function writeCache(data) {
   }
 }
 
+export async function getLocationLabel() {
+  try {
+    const data = await fetchWeatherData()
+    return data.today.location
+  } catch {
+    return null
+  }
+}
+
 export async function fetchWeatherData() {
   const cached = readCache()
   if (cached) return cached
@@ -111,13 +145,16 @@ async function fetchWeatherDataUncached() {
     throw new Error('Weather API key not configured')
   }
 
-  const { lat, lon, isLive } = await getCurrentCoords()
+  const { lat, lon, source, label } = await resolveLocation()
 
   const [currentRes, forecastRes, locationName] = await Promise.all([
     fetch(`${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`),
     fetch(`${BASE_URL}/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`),
-    isLive ? reverseGeocode(lat, lon) : Promise.resolve(FALLBACK_LABEL),
+    source === 'gps' ? reverseGeocode(lat, lon) : Promise.resolve(label),
   ])
+
+  const coordsLabel =
+    `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}°${lon >= 0 ? 'E' : 'W'}`
 
   if (!currentRes.ok || !forecastRes.ok) {
     const status = !currentRes.ok ? currentRes.status : forecastRes.status
@@ -157,12 +194,16 @@ async function fetchWeatherDataUncached() {
   let alert = null
   const rainySlot = next24h.find((e) => (e.pop || 0) >= 0.5)
   if (rainySlot) {
-    const when = new Date(rainySlot.dt * 1000).toLocaleTimeString('en-US', {
-      hour: 'numeric', hour12: true,
-    })
+    const slotDate = new Date(rainySlot.dt * 1000)
+    const today = new Date()
+    const isToday = slotDate.toDateString() === today.toDateString()
+    const isTomorrow =
+      slotDate.toDateString() === new Date(today.getTime() + 86400000).toDateString()
+    const dayWord = isToday ? 'today' : isTomorrow ? 'tomorrow' : slotDate.toLocaleDateString('en-US', { weekday: 'long' })
+    const when = slotDate.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true })
     alert = {
       type: 'rain',
-      message: `Rain likely around ${when} — plan spraying and irrigation accordingly.`,
+      message: `Rain likely ${dayWord} around ${when} — plan spraying and irrigation accordingly.`,
     }
   }
 
@@ -183,8 +224,9 @@ async function fetchWeatherDataUncached() {
 
   return {
     today: {
-      location: locationName || FALLBACK_LABEL,
-      isLiveLocation: isLive,
+      location: locationName || 'Unknown location',
+      coordsLabel,
+      locationSource: source,
       temp: Math.round(current.main.temp),
       condition: current.weather[0].main,
       icon: iconFor(current.weather[0].icon),

@@ -1,17 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, MapPin, Phone, Sprout, LogOut, ChevronRight, Globe, Bell,
   HelpCircle, X, Check, Mail, MessageCircle, CheckCircle2,
 } from 'lucide-react'
 import { user } from '../data/mockData.js'
+import { getLocationLabel } from '../lib/weather.js'
 import './Profile.css'
 
 const languages = ['English', 'हिंदी (Hindi)', 'मराठी (Marathi)', 'తెలుగు (Telugu)']
 
 function loadPref(key, fallback) {
   try {
-    const v = localStorage.getItem(key)
+    const v = sessionStorage.getItem(key)
     return v === null ? fallback : JSON.parse(v)
   } catch {
     return fallback
@@ -22,9 +23,15 @@ export default function Profile() {
   const navigate = useNavigate()
   const [language, setLanguage] = useState(() => loadPref('kc_language', 'English'))
   const [notificationsOn, setNotificationsOn] = useState(() => loadPref('kc_notifications', true))
+  const [phone] = useState(() => loadPref('kc_user_phone', user.phone))
+  const [location, setLocation] = useState('Detecting location…')
   const [showLangSheet, setShowLangSheet] = useState(false)
   const [showHelpSheet, setShowHelpSheet] = useState(false)
   const [toast, setToast] = useState('')
+
+  useEffect(() => {
+    getLocationLabel().then((loc) => setLocation(loc || 'Location unavailable'))
+  }, [])
 
   const showToast = (msg) => {
     setToast(msg)
@@ -33,7 +40,7 @@ export default function Profile() {
 
   const selectLanguage = (lang) => {
     setLanguage(lang)
-    localStorage.setItem('kc_language', JSON.stringify(lang))
+    sessionStorage.setItem('kc_language', JSON.stringify(lang))
     setShowLangSheet(false)
     if (lang === 'English') {
       showToast('Language set to English')
@@ -45,7 +52,7 @@ export default function Profile() {
   const toggleNotifications = () => {
     const next = !notificationsOn
     setNotificationsOn(next)
-    localStorage.setItem('kc_notifications', JSON.stringify(next))
+    sessionStorage.setItem('kc_notifications', JSON.stringify(next))
     showToast(next ? 'Notifications turned on' : 'Notifications turned off')
   }
 
@@ -62,8 +69,8 @@ export default function Profile() {
         <div className="avatar">{user.name.charAt(0)}</div>
         <div>
           <h2>{user.name}</h2>
-          <p><MapPin size={13} /> {user.village}</p>
-          <p><Phone size={13} /> {user.phone}</p>
+          <p><MapPin size={13} /> {location}</p>
+          <p><Phone size={13} /> {phone}</p>
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient.js'
 import { user } from '../data/mockData.js'
+import { getLocationLabel } from '../lib/weather.js'
 import './Marketplace.css'
 
 const cropEmoji = {
@@ -35,7 +36,12 @@ export default function Marketplace() {
   const [locating, setLocating] = useState(false)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [toast, setToast] = useState('')
+  const [myLocation, setMyLocation] = useState('')
   const fileRef = useRef(null)
+
+  useEffect(() => {
+    getLocationLabel().then((loc) => setMyLocation(loc || ''))
+  }, [])
 
   const showToast = (msg) => {
     setToast(msg)
@@ -194,7 +200,7 @@ export default function Marketplace() {
         quantity: `${form.quantity} kg`,
         price_per_kg: price,
         seller_name: user.name,
-        village: user.village.split(',')[0],
+        village: myLocation.split(',')[0] || 'Unknown location',
         map_link: form.mapLink.trim() || null,
         photos: form.photos,
         highest_bid: price,

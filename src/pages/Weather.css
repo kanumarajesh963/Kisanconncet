@@ -36,8 +36,16 @@
   font-size: 12.5px;
   color: var(--color-text-muted);
   font-weight: 500;
+  margin-left: 48px;
+}
+
+.coords-row {
+  font-size: 10.5px;
+  color: var(--color-text-muted);
+  opacity: 0.7;
   margin-bottom: 16px;
   margin-left: 48px;
+  font-family: monospace;
 }
 
 .location-fallback-note {

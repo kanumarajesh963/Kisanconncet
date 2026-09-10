@@ -1,6 +1,5 @@
 export const user = {
   name: 'Rajesh Kanuma',
-  village: 'Anantapur, Andhra Pradesh',
   phone: '+91 98765 43210',
   farmSize: '3.2 acres',
   crops: ['Sugarcane', 'Onion', 'Soybean'],

@@ -20,7 +20,7 @@ export default function Weather() {
       const result = await fetchWeatherData()
       setData(result)
     } catch (err) {
-      setError('Could not load live weather — the API key may still be activating (can take up to 2 hours after signup)')
+      setError('Could not load live weather — check your internet connection and try again')
     }
     setLoading(false)
   }, [])
@@ -76,7 +76,12 @@ export default function Weather() {
 
       <div className="location-row">
         <MapPin size={13} /> {today.location}
-        {!today.isLiveLocation && <span className="location-fallback-note">(default village)</span>}
+        {today.locationSource === 'ip' && (
+          <span className="location-fallback-note">(approximate — via network)</span>
+        )}
+      </div>
+      <div className="coords-row">
+        {today.coordsLabel} · source: {today.locationSource === 'gps' ? 'GPS' : 'IP-based'}
       </div>
 
       <div className="current-card">

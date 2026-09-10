@@ -37,6 +37,7 @@ export default function Login() {
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
+      sessionStorage.setItem('kc_user_phone', JSON.stringify(`+91 ${phone}`))
       navigate('/home')
     }, 800)
   }

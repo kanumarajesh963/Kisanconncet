@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Calendar, Stethoscope, ShoppingCart, Landmark, Tractor,
   Banknote, Leaf, Users, User, ChevronRight,
 } from 'lucide-react'
 import { user } from '../data/mockData.js'
+import { getLocationLabel } from '../lib/weather.js'
 import './More.css'
 
 const items = [
@@ -18,6 +20,12 @@ const items = [
 ]
 
 export default function More() {
+  const [location, setLocation] = useState('Detecting location…')
+
+  useEffect(() => {
+    getLocationLabel().then((loc) => setLocation(loc || 'Location unavailable'))
+  }, [])
+
   return (
     <div className="more-page">
       <div className="more-header">
@@ -30,7 +38,7 @@ export default function More() {
           <div className="avatar-sm">{user.name.charAt(0)}</div>
           <div>
             <h3>{user.name}</h3>
-            <span>{user.village}</span>
+            <span>{location}</span>
           </div>
         </div>
         <ChevronRight size={18} />
